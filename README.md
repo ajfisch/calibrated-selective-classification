@@ -25,13 +25,13 @@ All commands should now be run from the root directory of this repository.
 
 ## Pre-trained models
 
-For CIFAR-10, we trained our base model `f(X)` using 
+For CIFAR-10, we trained our base model $f(X)$ using 
 ```
 python bin/cifar/train_base_model.py
 ```
 This is based on the training in [AugMix](https://github.com/google-research/augmix). Augmentations can be turned on/off using the `--no-aug` flag.
 
-For ImageNet, our base model `f(X)` is automatically downloaded from the pre-trained model zoo. Our lung cancer risk prediction model was trained using [Sybil](https://github.com/reginabarzilaygroup/Sybil).
+For ImageNet, our base model $f(X)$ is automatically downloaded from the pre-trained model zoo. Our lung cancer risk prediction model was trained using [Sybil](https://github.com/reginabarzilaygroup/Sybil).
 
 
 All pre-trained $f(X)$ and $g(X)$ models used in our experiments (for CIFAR-10, ImageNet, and Lung) can be downloaded by running:
