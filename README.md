@@ -13,3 +13,29 @@ We provide instructions to install CSC within a [conda](https://conda.io/project
 ```
 conda create -n csc python=3.8 && conda activate csc
 ```
+
+Install PyTorch following the instructions from pytorch.org.
+
+Install all other requirements via `pip install -r requirements.txt`.
+
+All commands should now be run from the root directory of this repository.
+
+
+## Pre-trained models
+
+For CIFAR-10, we trained our base model `f(X)` using 
+```
+python bin/cifar/train_base_model.py
+```
+This is based on the training in [AugMix](https://github.com/google-research/augmix). Augmentations can be turned on/off using the `--no-aug` flag.
+
+For ImageNet, our base model `f(X)` is automatically downloaded from the pre-trained model zoo. Our lung cancer risk prediction model was trained using [Sybil](https://github.com/reginabarzilaygroup/Sybil).
+
+
+All pre-trained `f(X)` and `g(X)` models used in our experiments (for CIFAR-10, ImageNet, and Lung) can be downloaded by running:
+```
+./download_models.sh
+```
+
+## Training a selective model
+
