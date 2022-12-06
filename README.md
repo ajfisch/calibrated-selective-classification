@@ -63,13 +63,11 @@ tar -xvf weather.tar -C data/processed/imagenet/imagenet-c
 
 3. Unfortunately we cannot directly release MGH and NLST data. 
 
-See the individual directories under [bin/cifar](bin/cifar), [bin/imagenet](bin/imagenet), and [bin/lung](bin/lung) for instructions on how to prepare predictions and features for selective calibration training of the auxiliary selector $g(X)$.
-
 ## Data preparation
 
 ### Input formats
 
-This step assumes that training and testing data have been preprocessed into [InputDataset](src/data/__init__.py)'s and that the calibration and validation data have been processed into [BatchedInputdataset](src/data/__init__.py)'s. See pre-processing instructions in each sub-directory.
+This step assumes that training and testing data have been preprocessed into [InputDataset](src/data/__init__.py)'s and that the calibration and validation data have been processed into [BatchedInputdataset](src/data/__init__.py)'s. See pre-processing instructions in each individual sub-directory: [bin/cifar](bin/cifar), [bin/imagenet](bin/imagenet), and [bin/lung](bin/lung).
 
 A `InputDataset` is a namedtuple with the following fields:
 - `input_features`: The representation for the input $x$. For example, the last layer representation of $f(x)$ derived for all inputs $x$ in the dataset.
