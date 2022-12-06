@@ -137,3 +137,20 @@ python bin/tools/evaluate_selective_model.py \
   --input_datasets <path to saved InputDatasets> \
   --output_file <path to output file>
 ```
+
+## Visualizing predictions
+
+We provide some Jupyter notebook scripts for visualizing predictions in the [notebooks](notebooks) folder.
+
+## Citation
+If you find this work useful, please cite our TMLR paper:
+```
+@article{fisch2022selective,
+    title={Calibrated Selective Classification},
+    author={Adam Fisch  and Tommi Jaakkola and Regina Barzilay},
+    journal={Transactions on Machine Learning Research (TMLR)},
+    month={Nov},
+    year={2022},
+    url={https://openreview.net/forum?id=zFhNBs8GaV},
+}
+```
