@@ -1,5 +1,12 @@
 # CIFAR-10
 
+Download CIFAR-10-C:
+```
+mkdir -p ./data/processed/cifar
+curl -O https://zenodo.org/record/2535967/files/CIFAR-10-C.tar
+tar -xvf CIFAR-10-C.tar -C data/processed/cifar/
+```
+
 Train a model on CIFAR-10 using
 ```
 python bin/cifar/train_base_model.py
