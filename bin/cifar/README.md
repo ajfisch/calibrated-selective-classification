@@ -20,6 +20,11 @@ python bin/cifar/process_splits.py --temperature-scale
 
 Derive meta features:
 ```
+python bin/tools/generate_meta_features.py \
+  --train-dataset data/processed/cifar/train.pt \
+  --cal-dataset data/processed/cifar/pcal.pt \
+  --val-dataset data/processed/cifar/pval.pt \
+  --test-datasets data/processed/cifar/test_*.pt
 ```
 
 Train the selector:
