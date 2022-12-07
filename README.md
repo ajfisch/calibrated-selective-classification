@@ -1,6 +1,6 @@
 # Calibrated Selective Classification
 
-This code accompanies the TMLR paper [Calibrated Selective Classification](https://openreview.net/forum?id=zFhNBs8GaV).
+This code provides an implementation of [Calibrated Selective Classification](https://openreview.net/forum?id=zFhNBs8GaV).
 
 ## Summary
 
@@ -145,7 +145,7 @@ If you find this work useful, please cite our TMLR paper:
 ```
 @article{fisch2022selective,
     title={Calibrated Selective Classification},
-    author={Adam Fisch  and Tommi Jaakkola and Regina Barzilay},
+    author={Adam Fisch and Tommi Jaakkola and Regina Barzilay},
     journal={Transactions on Machine Learning Research (TMLR)},
     month={Nov},
     year={2022},
