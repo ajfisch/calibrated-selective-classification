@@ -29,8 +29,14 @@ python bin/tools/generate_meta_features.py \
 
 Train the selector:
 ```
+python bin/tools/train_selective_model.py \
+  --cal-dataset data/processed/cifar/pcal.meta.pt \
+  --val-dataset data/processed/cifar/pval.meta.pt
 ```
 
-Evaluate the selector:
+Evaluate the selector in terms of AUC, or at a desired coverage level (coverage > 0):
 ```
+python bin/tools/evaluate_selective_model.py \
+  --datasets data/processed/cifar/test*.meta.pt \
+  --coverage -1
 ```
