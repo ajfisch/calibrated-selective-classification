@@ -31,23 +31,6 @@ All pre-trained $f(X)$ and $g(X)$ models used in our experiments (for CIFAR-10, 
 
 See individual repositories for data downloading instructions (however, we unfortunately cannot directly release MGH and NLST data).
 
-## Data
-
-2. Download ImageNet-C:
- ```
-mkdir -p ./data/processed/imagenet/imagenet-c
-curl -O https://zenodo.org/record/2235448/files/blur.tar
-curl -O https://zenodo.org/record/2235448/files/digital.tar
-curl -O https://zenodo.org/record/2235448/files/noise.tar
-curl -O https://zenodo.org/record/2235448/files/weather.tar
-tar -xvf blur.tar -C data/processed/imagenet/imagenet-c
-tar -xvf digital.tar -C data/processed/imagenet/imagenet-c
-tar -xvf noise.tar -C data/processed/imagenet/imagenet-c
-tar -xvf weather.tar -C data/processed/imagenet/imagenet-c
-```
-
-## Data preparation
-
 ### Input formats
 
 This step assumes that training and testing data have been preprocessed into [InputDataset](src/data/__init__.py)'s and that the calibration and validation data have been processed into [BatchedInputdataset](src/data/__init__.py)'s. See pre-processing instructions in each individual sub-directory: [bin/cifar](bin/cifar), [bin/imagenet](bin/imagenet), and [bin/lung](bin/lung).
