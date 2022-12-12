@@ -31,7 +31,7 @@ All pre-trained $f(X)$ and $g(X)$ models used in our experiments (for CIFAR-10, 
 
 ## Data
 
-See individual repositories for data downloading and initial preparation instructions (however, we unfortunately cannot directly release MGH and NLST data).
+See individual repositories for data downloading and initial preparation instructions.
 
 ### Input formats
 
