@@ -24,14 +24,12 @@ All commands should now be run from the root directory of this repository.
 
 
 ## Pre-trained models
-
-For ImageNet, our base model $f(X)$ is automatically downloaded from the pre-trained model zoo. Our lung cancer risk prediction model was trained using [Sybil](https://github.com/reginabarzilaygroup/Sybil).
-
-
 All pre-trained $f(X)$ and $g(X)$ models used in our experiments (for CIFAR-10, ImageNet, and Lung) can be downloaded by running:
 ```
 ./download_models.sh
 ```
+
+See individual repositories for data downloading instructions (however, we unfortunately cannot directly release MGH and NLST data).
 
 ## Data
 
@@ -47,8 +45,6 @@ tar -xvf digital.tar -C data/processed/imagenet/imagenet-c
 tar -xvf noise.tar -C data/processed/imagenet/imagenet-c
 tar -xvf weather.tar -C data/processed/imagenet/imagenet-c
 ```
-
-3. Unfortunately we cannot directly release MGH and NLST data. 
 
 ## Data preparation
 
