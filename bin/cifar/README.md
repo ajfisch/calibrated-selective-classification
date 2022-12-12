@@ -1,11 +1,12 @@
 # CIFAR-10
 
 ## Pre-training
+For CIFAR-10, we trained our base model $f(X)$ using 
+```
+python bin/cifar/train_base_model.py --no-aug
+```
+This is based on the training in [AugMix](https://github.com/google-research/augmix). Augmentations can be turned on by removing the `--no-aug` flag.
 
-Train a model on CIFAR-10 using
-```
-python bin/cifar/train_base_model.py
-```
 Alternatively, download our pre-trained models using the [download script](../download_models.sh).
 
 ## Data preparation
