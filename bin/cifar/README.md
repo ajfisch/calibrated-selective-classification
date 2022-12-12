@@ -1,17 +1,20 @@
 # CIFAR-10
 
-Download CIFAR-10-C:
-```
-mkdir -p ./data/processed/cifar
-curl -O https://zenodo.org/record/2535967/files/CIFAR-10-C.tar
-tar -xvf CIFAR-10-C.tar -C data/processed/cifar/
-```
+## Pre-training
 
 Train a model on CIFAR-10 using
 ```
 python bin/cifar/train_base_model.py
 ```
 Alternatively, download our pre-trained models using the [download script](../download_models.sh).
+
+## Data preparation
+Download CIFAR-10-C:
+```
+mkdir -p ./data/processed/cifar
+curl -O https://zenodo.org/record/2535967/files/CIFAR-10-C.tar
+tar -xvf CIFAR-10-C.tar -C data/processed/cifar/
+```
 
 Make predictions and generate last-layer features for all CIFAR-10 image splits (including CIFAR-10-C).
 ```
@@ -27,6 +30,7 @@ python bin/tools/generate_meta_features.py \
   --test-datasets data/processed/cifar/test_*.pt
 ```
 
+## Training and evaluation
 Train the selector:
 ```
 python bin/tools/train_selective_model.py \
