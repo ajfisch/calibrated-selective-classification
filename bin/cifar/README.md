@@ -17,7 +17,7 @@ curl -O https://zenodo.org/record/2535967/files/CIFAR-10-C.tar
 tar -xvf CIFAR-10-C.tar -C data/processed/cifar/
 ```
 
-Make predictions and generate last-layer features for all CIFAR-10 image splits (including CIFAR-10-C).
+Make predictions and generate last-layer features for all CIFAR-10 image splits (including CIFAR-10-C):
 ```
 python bin/cifar/process_splits.py --temperature-scale
 ```
