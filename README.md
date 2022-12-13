@@ -42,7 +42,7 @@ See individual repositories for instructions on task-specific training, data dow
 
 ### Input formats
 
-A `InputDataset` is a namedtuple with the following fields:
+An `InputDataset` is a namedtuple with the following fields:
 - `input_features`: The representation for the input $x$. For example, the last layer representation of $f(x)$ derived for all inputs $x$ in the dataset.
 This is an array of size [num_examples, num_features].
 - `output_probs`: The prediction $p_\theta(y|x)$. This is an array of size [num_examples, num_classes].
