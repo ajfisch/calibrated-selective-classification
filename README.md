@@ -29,9 +29,13 @@ All pre-trained $f(X)$ and $g(X)$ models used in our experiments (for CIFAR-10, 
 ./download_models.sh
 ```
 
-## Data
+Similarly, all pre-processed data (with the exception of lung cancer data, which we cannot directly release) can be downloaded by running:
+```
+./download_data.sh
+```
+See individual repositories for instructions on task-specific training, data downloading, and preprocessing.
 
-See individual repositories for data downloading and initial preparation instructions.
+## Data
 
 ### Input formats
 
