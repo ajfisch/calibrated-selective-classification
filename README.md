@@ -44,16 +44,16 @@ See individual repositories for instructions on task-specific training, data dow
 
 An `InputDataset` is a namedtuple with the following fields:
 - `input_features`: The representation for the input $x$. For example, the last layer representation of $f(x)$ derived for all inputs $x$ in the dataset.
-This is an array of size [num_examples, num_features].
-- `output_probs`: The prediction $p_\theta(y|x)$. This is an array of size [num_examples, num_classes].
-- `confidences`: The confidence estimate (typically $p_\theta(y = 1 | x)$ for binary problems, or $\max p_\theta(y | x)$ for multi-class problems). This is an array of size [num_examples].
-- `labels`: The binary (or binarized) label (typically $y$ for binary problems, or $y = \arg\max p_\theta(y | x)$ for multi-class problems). This is an array of size [num_examples].
+This is an array of size `[num_examples, num_features]`.
+- `output_probs`: The prediction $p_\theta(y|x)$. This is an array of size `[num_examples, num_classes]` (for binary problems, take `num_classes` = 2).
+- `confidences`: The confidence estimate (typically $p_\theta(y = 1 | x)$ for binary problems, or $\max p_\theta(y | x)$ for multi-class problems). This is an array of size `[num_examples]`.
+- `labels`: The binary (or binarized) label (typically $y$ for binary problems, or $y = \arg\max p_\theta(y | x)$ for multi-class problems). This is an array of size `[num_examples]`.
 
 A `BatchedInputDataset` is exactly the same as the above `InputDataset`, with the difference that each portion of the data has an extra leading dimension for the perturbation index. Specifically, the calibration and validation data are comprised of *perturbed* batches of data, in which a perturbation $t \in \mathcal{T}$ has been applied to a batch of training data from $\mathcal{D}_\text{train}$. The `BatchedInputDataset` is therefore essentially a concatenation of many `InputDataset`s. The sizes of each field of a `BatchedInputDataset` are therefore:
-- `input_features`: [num_perturbations, num_examples, num_features].
-- `output_probs`: [num_perturbations, num_examples, num_classes].
-- `confidences`: [num_perturbations, num_examples].
-- `labels`: [num_perturbations, num_examples].
+- `input_features`: `[num_perturbations, num_examples_per_perturbation, num_features]`.
+- `output_probs`: `[num_perturbations, num_examples_per_perturbation, num_classes]`.
+- `confidences`: `[num_perturbations, num_examples_per_perturbation]`.
+- `labels`: `[num_perturbations, num_examples_per_perturbation]`.
 
 ### Checking the calibration error
 
