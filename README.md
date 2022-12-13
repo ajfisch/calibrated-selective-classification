@@ -90,13 +90,23 @@ This will save the calibration, validation, and each testing file as a new `Inpu
 
 ## Training a selective model
 
-To train a selective model $g(X)$ (implemented as a [SelectiveNet](src/models.py)), run:
+To train a *soft* selective model $\tilde{g}(X)$ (implemented as a [SelectiveNet](src/models.py)), run:
 ```
 python bin/tools/train_selective_model.py \
   --cal_dataset <path to saved BatchedInputDataset> \
   --val_dataset <path to saved BatchedInputDataset>
 ```
+The binary predictor $g(X) := 1 \[ \tilde{g}(X) \geq \tau \]$ is derived by calibrating a threshold for this soft predictor.
 
+
+> **Note** All of the subsequent evaluation steps simultaneously calibrate and evaluate the selector `g(X)` such that it acheives the target coverage. To derive a threshold for the soft selector, run 
+> ```
+> python bin/tools/evaluate_selector_threshold.py \
+>   --model_file <path to save SelectiveNet checkpoint> \
+>   --calibration_dataset <path to saved (unlabeled) InputDataset>
+> ```
+  
+  
 To make predictions (at a target coverage level) on a new dataset, run:
 ```
 python bin/tools/run_selective_model.py \
@@ -105,14 +115,18 @@ python bin/tools/run_selective_model.py \
   --coverage_level <coverage level> \
   --output_file <path to output file>
 ```
+If the coverage level is $\leq 0$, then the above command will output soft scores $\tilde{g}(X)$ that are not yet binarized.
 
-To evaluate the selective predictor in terms of calibration error AUC, run:
+To evaluate the selective predictor in terms of selective calibration error, run:
 ```
 python bin/tools/evaluate_selective_model.py \
   --model_file <path to saved SelectiveNet checkpoint> \
   --input_datasets <path to saved InputDatasets> \
+  --coverage_level <coverage level> \
   --output_file <path to output file>
 ```
+If the coverage level is $\leq 0$, then the above command will compute the selective calibration error AUC.
+
 
 ## Visualizing predictions
 
