@@ -1,5 +1,11 @@
 # CIFAR-10
 
+## Create splits
+To split CIFAR-10 into training, calibration, and validation sets (testing is done on CIFAR-10-C), run:
+```
+python bin/cifar/create_splits.py
+````
+
 ## Pre-training
 For CIFAR-10, we trained our base model $f(X)$ using 
 ```
@@ -29,6 +35,11 @@ python bin/tools/generate_meta_features.py \
   --cal-dataset data/processed/cifar/pcal.pt \
   --val-dataset data/processed/cifar/pval.pt \
   --test-datasets data/processed/cifar/test_*.pt
+```
+
+To skip all steps up to this point, download our precomputed features by running
+```
+./bin/cifar/download_data.sh
 ```
 
 ## Training and evaluation
