@@ -78,7 +78,10 @@ python bin/tools/estimate_ideal_error.py \
 To generate the meta-features, run
 ```
 python bin/tools/generate_meta_features.py \
-  --train_dataset <path to saved InputDataset>
+  --train-dataset <path to saved InputDataset> \
+  --cal-dataset <path to saved BatchedInputDataset> \
+  --val-dataset <path to saved BatchedInputDataset> \
+  --test-datasets <paths to saved InputDatasets>
 ```
 
 This will save the calibration, validation, and each testing file as a new `InputDataset` (or `BatchedInputDataset`), with the `input_features` field replaced with the derived meta features. 
@@ -87,7 +90,7 @@ This will save the calibration, validation, and each testing file as a new `Inpu
 
 ## Training a selective model
 
-To train a selective model $g(X)$, run:
+To train a selective model $g(X)$ (implemented as a [SelectiveNet](src/models.py)), run:
 ```
 python bin/tools/train_selective_model.py \
   --cal_dataset <path to saved BatchedInputDataset> \
@@ -97,7 +100,7 @@ python bin/tools/train_selective_model.py \
 To make predictions (at a target coverage level) on a new dataset, run:
 ```
 python bin/tools/run_selective_model.py \
-  --model_file <path to saved selective model> \
+  --model_file <path to saved SelectiveNet checkpoint> \
   --input_dataset <path to saved InputDataset> \
   --coverage_level <coverage level> \
   --output_file <path to output file>
@@ -106,7 +109,7 @@ python bin/tools/run_selective_model.py \
 To evaluate the selective predictor in terms of calibration error AUC, run:
 ```
 python bin/tools/evaluate_selective_model.py \
-  --model_file <path to saved selective model> \
+  --model_file <path to saved SelectiveNet checkpoint> \
   --input_datasets <path to saved InputDatasets> \
   --output_file <path to output file>
 ```
