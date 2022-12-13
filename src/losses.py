@@ -28,7 +28,7 @@ def laplacian_kernel(values_i, values_j, width=0.2):
 def compute_smmce_loss(outputs, targets, weights, kernel_fn=None, pnorm=2):
     """Compute the non-normalized S-MMCE_u loss.
 
-    1/|D^2| \sum_{ij} |y_i - r_i|^q |y_j - r_j|^q g(x_i) g(x_j) k(r_i, r_j)
+    \sum_{ij} |y_i - r_i|^q |y_j - r_j|^q g(x_i) g(x_j) k(r_i, r_j)
 
     Args:
         outputs: Confidence values r_i.
@@ -58,8 +58,7 @@ def compute_smmce_loss(outputs, targets, weights, kernel_fn=None, pnorm=2):
     # Compute full matrix: error_i * error_j * g_i * g_j * k(i, j).
     matrix_values = pairwise_errors * kernel_matrix * weights
 
-    # Here we *do not* normalize by sum(weights)^2, but rather the
-    # full |D|^2, as described in Eq. 15 of the paper.
+    # Here we *do not* do any normalization, as described in Eq. 15.
     smmce_loss = matrix_values.sum().pow(1 / pnorm)
 
     return smmce_loss
@@ -68,7 +67,7 @@ def compute_smmce_loss(outputs, targets, weights, kernel_fn=None, pnorm=2):
 def compute_log_regularization_loss(weights):
     """Compute log regularization term to avoid weights collapse to 0.
 
-    1/|D| \sum_i -log(g(x_i))
+    \sum_i -log(g(x_i))
 
     Args:
         weights: Selection weights g(x_i).

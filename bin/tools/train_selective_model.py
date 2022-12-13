@@ -349,15 +349,17 @@ def main(args):
     # Save initial model.
     checkpoint_name = os.path.join(args.model_dir, 'model_best.pt')
     save_model(checkpoint_name, 0, selector, optimizer)
+    logging.info("=" * 88)
     results = evaluate_model(selector, val_loader)
     best_metric = results[1] if args.kappa > 0 else results[0]
     logging.info(f'Current selective AUC: {best_metric:.3e}')
 
     # Train for n epochs, saving best model along the way.
     for epoch in range(1, args.epochs + 1):
-        logging.info("=" * 87)
+        logging.info("=" * 88)
         logging.info(f'Starting epoch {epoch}/{args.epochs}...')
         selector = train_model(args, selector, cal_loader, optimizer)
+        logging.info("=" * 88)
         results = evaluate_model(selector, val_loader)
         metric = results[1] if args.kappa > 0 else results[0]
         logging.info(f'Current selective AUC: {metric:.3e}')
