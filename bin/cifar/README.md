@@ -1,22 +1,31 @@
 # CIFAR-10
+The following commands outline how to process data and train a selector model for CIFAR-10.
 
-## Create splits
+## Data and model preparation
+
+> **Note**
+> To skip all subsequent steps in this section, download our precomputed features by running
+> ```
+> ./bin/cifar/download_data.sh
+> ```
+
+
+### Create splits
 To split CIFAR-10 into training, calibration, and validation sets (testing is done on CIFAR-10-C), run:
 ```
 python bin/cifar/create_splits.py
 ````
 
-## Pre-training
+### Pre-training
 For CIFAR-10, we trained our base model $f(X)$ using 
 ```
 python bin/cifar/train_base_model.py --no-aug
 ```
 This is based on the training in [AugMix](https://github.com/google-research/augmix). Augmentations can be turned on by removing the `--no-aug` flag.
 
-> **Note**
-> Alternatively, download our pre-trained models using the [download script](../download_models.sh).
+Alternatively, download our pre-trained models using the [download script](../download_models.sh).
 
-## Data preparation
+### Preprocessing
 Download CIFAR-10-C:
 ```
 mkdir -p ./data/processed/cifar
@@ -37,12 +46,6 @@ python bin/tools/generate_meta_features.py \
   --val-dataset data/processed/cifar/pval.pt \
   --test-datasets data/processed/cifar/test_*.pt
 ```
-
-> **Note**
-> To skip all steps up to this point, download our precomputed features by running
-> ```
-> ./bin/cifar/download_data.sh
-> ```
 
 ## Training and evaluation
 Train the selector:
