@@ -72,7 +72,7 @@ python bin/tools/estimate_ideal_error.py \
   --coverage <coverage level>
 ```
 
-*(Note: this directly optimizes binary weights for each example in the provided datase to minimize the S-MMCE. It does not represent generalization error.)*
+> **Warning** This directly optimizes binary weights for each example in the provided datase to minimize the S-MMCE. It does not represent generalization error, and is only useful for estimating an upper bound on performance.
 
 ### Generating features
 To generate the meta-features, run
@@ -81,7 +81,9 @@ python bin/tools/generate_meta_features.py \
   --train_dataset <path to saved InputDataset>
 ```
 
-This will save the calibration, validation, and each testing file as a new `InputDataset` (or `BatchedInputDataset`), with the `input_features` field replaced with the derived meta features. *(See section 4.5 of the paper for a description of the chosen meta features.)*
+This will save the calibration, validation, and each testing file as a new `InputDataset` (or `BatchedInputDataset`), with the `input_features` field replaced with the derived meta features. 
+
+> **Note** See section 4.5 of the paper for a description of the chosen meta features.
 
 ## Training a selective model
 
