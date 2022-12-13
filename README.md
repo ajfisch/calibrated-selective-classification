@@ -37,9 +37,10 @@ See individual repositories for instructions on task-specific training, data dow
 
 ## Data
 
-### Input formats
+> **Note**
+> The following steps assume that training and testing data have already been preprocessed into [InputDataset](src/data/__init__.py)'s, and that the calibration and validation data have been processed into [BatchedInputdataset](src/data/__init__.py)'s. This format is described below.
 
-This step assumes that training and testing data have been preprocessed into [InputDataset](src/data/__init__.py)'s and that the calibration and validation data have been processed into [BatchedInputdataset](src/data/__init__.py)'s. See pre-processing instructions each sub-directory: [cifar](bin/cifar), [imagenet](bin/imagenet), and [lung](bin/lung).
+### Input formats
 
 A `InputDataset` is a namedtuple with the following fields:
 - `input_features`: The representation for the input $x$. For example, the last layer representation of $f(x)$ derived for all inputs $x$ in the dataset.
