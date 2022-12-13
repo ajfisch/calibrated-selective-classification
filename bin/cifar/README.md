@@ -13,7 +13,8 @@ python bin/cifar/train_base_model.py --no-aug
 ```
 This is based on the training in [AugMix](https://github.com/google-research/augmix). Augmentations can be turned on by removing the `--no-aug` flag.
 
-Alternatively, download our pre-trained models using the [download script](../download_models.sh).
+> **Note**
+> Alternatively, download our pre-trained models using the [download script](../download_models.sh).
 
 ## Data preparation
 Download CIFAR-10-C:
@@ -37,10 +38,11 @@ python bin/tools/generate_meta_features.py \
   --test-datasets data/processed/cifar/test_*.pt
 ```
 
-To skip all steps up to this point, download our precomputed features by running
-```
-./bin/cifar/download_data.sh
-```
+> **Note**
+> To skip all steps up to this point, download our precomputed features by running
+> ```
+> ./bin/cifar/download_data.sh
+> ```
 
 ## Training and evaluation
 Train the selector:
