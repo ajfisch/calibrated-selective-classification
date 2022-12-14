@@ -57,22 +57,12 @@ A `BatchedInputDataset` is exactly the same as the above `InputDataset`, with th
 
 ### Checking the calibration error
 
-Running these scripts is optional, and only for exploring the data. 
+*(Optional)* To check the initial calibration error without any selection, you can run:
 
-To check the initial calibration error without any selection, you can run:
 ```
 python bin/tools/check_calibration_error.py \
   --dataset <path to saved InputDatast or BatchedInputDataset>
 ```
-
-Similarly, if interested in estimating the "ideal" calibration error at a particular coverage level, you can run:
-```
-python bin/tools/estimate_ideal_error.py \
-  --dataset <path to saved InputDatast or BatchedInputDataset> \
-  --coverage <coverage level>
-```
-
-> **Warning** This directly optimizes binary weights for each example in the provided datase to minimize the S-MMCE. It does not represent generalization error, and is only useful for estimating an upper bound on performance.
 
 ### Generating features
 To generate the meta-features, run
@@ -84,7 +74,7 @@ python bin/tools/generate_meta_features.py \
   --test-datasets <paths to saved InputDatasets>
 ```
 
-This will save the calibration, validation, and each testing file as a new `InputDataset` (or `BatchedInputDataset`), with the `input_features` field replaced with the derived meta features. 
+This will save each calibration, validation, and testing file as a new `InputDataset` (or `BatchedInputDataset`), with the `input_features` field replaced with the derived meta features. 
 
 > **Note** See section 4.5 of the paper for a description of the chosen meta features.
 
@@ -96,36 +86,52 @@ python bin/tools/train_selective_model.py \
   --cal_dataset <path to saved BatchedInputDataset> \
   --val_dataset <path to saved BatchedInputDataset>
 ```
-The binary predictor $g(X) := 1 \[ \tilde{g}(X) \geq \tau \]$ is derived by calibrating a threshold for this soft predictor.
+The binary predictor $g(X) := 1 \[ \tilde{g}(X) \geq \tau \]$ is derived by calibrating a threshold for this soft predictor during evaluation (next).
 
+## Evaluating a selective model
 
 > **Note** All of the subsequent evaluation steps simultaneously calibrate and evaluate the selector `g(X)` such that it acheives the target coverage. To derive a threshold for the soft selector, run 
 > ```
-> python bin/tools/evaluate_selector_threshold.py \
+> python bin/tools/calibrate_selector_threshold.py \
 >   --model_file <path to save SelectiveNet checkpoint> \
 >   --calibration_dataset <path to saved (unlabeled) InputDataset>
 > ```
   
   
-To make predictions (at a target coverage level) on a new dataset, run:
+To make predictions (at a target coverage level $\xi$ ) on a new dataset, run:
 ```
 python bin/tools/run_selective_model.py \
   --model_file <path to saved SelectiveNet checkpoint> \
   --input_dataset <path to saved InputDataset> \
-  --coverage_level <coverage level> \
+  --calibration_dataset <path to saved (unlabeled) InputDataset> \
+  --threshold <threshold for g> \
+  --coverage_level <coverage level \xi> \
   --output_file <path to output file>
 ```
-If the coverage level is $\leq 0$, then the above command will output soft scores $\tilde{g}(X)$ that are not yet binarized.
+If the coverage level $\xi$ is $\leq 0$, then the above command will output soft scores $\tilde{g}(X)$ that are not yet binarized.
 
-To evaluate the selective predictor in terms of selective calibration error, run:
+> **Warning** If the `calibration_dataset` argument is not given, then the threshold for making predictions the soft selector will be computed on the `input_dataset`. If, however, the `threshold` argument is given, then both the `calibration_dataset` and `coverage_level` arguments will be **ignored**, and the model will make predictions using the given threshold.
+
+To evaluate the selective predictor **without pre-computing predictions** in terms of selective calibration error, run:
 ```
 python bin/tools/evaluate_selective_model.py \
-  --model_file <path to saved SelectiveNet checkpoint> \
-  --input_datasets <path to saved InputDatasets> \
-  --coverage_level <coverage level> \
+  --model_files <paths to saved SelectiveNet checkpoints> \
+  --coverage_level <coverage level \xi> \
   --output_file <path to output file>
 ```
-If the coverage level is $\leq 0$, then the above command will compute the selective calibration error AUC.
+If the coverage level $\xi$ is $\leq 0$, then the above command will compute the selective calibration error AUC.
+
+This script will compute the mean and standard deviation of each result across all given model samples, as well as $B$ bootstrap resamples of the test datasets (by default $B = 5$, this can be changed via the `--bootstraps` argument).
+
+Alternatively, to evaluate the selective predictor **after pre-computing predictions** (i.e., using the output of `run_selective_model.py`), run:
+```
+python bin/tools/evaluate_selective_model.py \
+  --input_datasets <path to saved InputDatasets> \
+  --output_files <path to saved output files from run_selective_model> \
+  --coverage_level <coverage level \xi> \
+  --output_file <path to output file>
+```
+> **Warning** Only specify `coverage_level` if the predictions have not yet been binarized.
 
 
 ## Visualizing predictions
