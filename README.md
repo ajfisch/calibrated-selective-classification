@@ -121,7 +121,7 @@ python bin/tools/evaluate_selective_model.py \
 ```
 If the coverage level $\xi$ is $\leq 0$, then the above command will compute the selective calibration error AUC.
 
-This script will compute the mean and standard deviation of each result across all given model samples, as well as $B$ bootstrap resamples of the test datasets (by default $B = 5$, this can be changed via the `--bootstraps` argument).
+This script will compute the mean and standard deviation of each result across all given model samples, as well as $B$ bootstrap resamples of the test datasets (by default $B = 5$ and can be changed via the `--bootstraps` argument).
 
 Alternatively, to evaluate the selective predictor **after pre-computing predictions** (i.e., using the output of `run_selective_model.py`), run:
 ```
