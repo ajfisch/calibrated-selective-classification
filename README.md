@@ -2,6 +2,8 @@
 
 This code provides an implementation of [Calibrated Selective Classification](https://openreview.net/forum?id=zFhNBs8GaV).
 
+(Some elements still in progress.)
+
 ## Summary
 
 <p align="center"><img width="70%" src="selective_figure.png" /></p>
