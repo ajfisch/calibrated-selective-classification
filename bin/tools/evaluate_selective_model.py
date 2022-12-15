@@ -1,152 +1,152 @@
-"""Train selector."""
+"""Evaluate selector."""
 
 import argparse
 import collections
-import tqdm
 import os
+import functools
+
 import numpy as np
 import torch
+import tqdm
 
 from src import metrics
 from src import models
+from src.data import BatchedInputDataset, InputDataset
 
 parser = argparse.ArgumentParser()
 
 parser.add_argument(
     '--model-files', type=str, nargs='+',
-    help='Paths to model files (if multiple, will be used to compute std).')
-
-parser.add_argument(
-    '--batch-size', type=int, default=128,
-    help='Batch size for evaluating datasets.')
+    help='Paths to model files (used for mean + std).')
 
 parser.add_argument(
     '--datasets', type=str, nargs='+',
     help='Paths to datasets to evaluate.')
 
 parser.add_argument(
+    '--output-file', type=str,
+    help='Path to directory where results will be saved.')
+
+parser.add_argument(
     '--bootstraps', type=int, default=5,
-    help='Number of resamples from each test dataset.')
+    help='Number of resamples from each test dataset (used for mean + std).')
+
+parser.add_argument(
+    '--coverage-level', type=float, default=-1,
+    help='Target coverage level (or AUC if ≤ 0).')
+
+parser.add_argument(
+    '--batch-size', type=int, default=128,
+    help='Batch size for evaluating datasets.')
 
 parser.add_argument(
     '--use-cpu', action='store_true',
     help='Force to run only on CPU.')
 
-parser.add_argument(
-    '--output-dir', type=str,
-    help='Path to directory where results will be saved.')
 
-args = parser.parse_args()
-args.cuda = torch.cuda.is_available() and not args.use_cpu
-device = torch.device("cuda:0" if args.cuda else "cpu")
+# Map of name to function for metrics we compute.
+METRICS = {
+    # The selective l_2 calibration error.
+    'ce_2': functools.partial(metrics.compute_ece, pnorm=2),
+    # The selective l_inf calibration error.
+    'ce_inf': functools.partial(metrics.compute_ece, pnorm=float('inf')),
+    # The selective Brier score.
+    'brier': metrics.compute_brier_score,
+    # The selective accuracy.
+    'acc': metrics.compute_accuracy,
+}
 
 
-def evaluate(selector, data_loader):
-    """Test model."""
+def evaluate_model(selector, data_loader, coverage=-1):
+    """Evaluate the selective calibration error AUC of the selector.
+
+    Args:
+        selector: SelectiveNet nn.Module implementing the selector g(X).
+        data_loader: DataLoader for evaluation data, where each batch can be
+            converted into either a BatchedInputDataset or a InputDataset.
+        coverage: Desired coverage level (-1 = AUC).
+
+    Returns:
+        A Result namedtuple with the mean metrics computed (the mean is only
+        taken if the input is an instance of a BatchedInputDataset).
+    """
     selector.eval()
-    all_confidences = []
-    all_targets = []
-    all_weights = collections.defaultdict(list)
+    device = next(selector.parameters()).device
+    all_outputs, all_targets, all_weights = [], [], []
 
-    # Run over full dataset.
+    # Infer from the first batch if the input is a BatchedInputDataset or not.
+    is_batched = False
+
     with torch.no_grad():
-        for inputs in data_loader:
-            # Transfer to device.
-            inputs = [i.to(device) for i in inputs]
-            confidences = inputs[0]
-            targets = inputs[1]
-            features = inputs[-1]
+        for batch in data_loader:
+            if batch[0].dim() == 2:
+                batch = InputDataset(*[ex.to(device) for ex in batch])
+            else:
+                is_batched = True
+                batch = BatchedInputDataset(*[ex.to(device) for ex in batch])
 
-            # Aggregate.
-            all_confidences.append(confidences)
-            all_targets.append(targets)
+            # Forward pass.
+            shape = batch.input_features.shape
+            features_flat = batch.input_features.view(-1, shape[-1])
+            logits = selector(features_flat.float()).view(*shape[:-1])
+            weights = torch.sigmoid(logits)
 
-            # Baselines.
-            for name, (sign, index) in BASELINES.items():
-                all_weights[name].append(sign * features[:, index])
+            all_outputs.append(batch.confidences.cpu())
+            all_targets.append(batch.labels.cpu())
+            all_weights.append(weights.cpu())
 
-            # Selector.
-            all_weights["selective"].append(selector(features))
+    # Aggregate.
+    combine = torch.cat if is_batched else torch.stack
+    all_outputs = combine(all_outputs, dim=0)
+    all_targets = combine(all_targets, dim=0)
+    all_weights = combine(all_weights, dim=0)
 
-    all_confidences = torch.cat(all_confidences, dim=0).unsqueeze(0)
-    all_targets = torch.cat(all_targets, dim=0).unsqueeze(0)
-    for name, weights in all_weights.items():
-        all_weights[name] = torch.cat(weights, dim=0).unsqueeze(0)
+    # Compute metrics.
+    all_metrics = collections.defaultdict(list)
+    if coverage <= 0:
+        eval_fn = metrics.compute_metric_auc
+    else:
+        eval_fn = functools.partial(
+            metrics.compute_metric_at_coverage, coverage)
+    for idx in range(len(all_outputs)):
+        for metric, metric_fn in METRICS:
+            all_metrics[metric].append(eval_fn(
+                outputs=all_outputs[idx],
+                targets=all_targets[idx],
+                weights=all_weights[idx],
+                metric_fn=metric_fn))
 
-    results = collections.OrderedDict()
-    results["full"] = {
-        "brier_auc": 100 * metrics.compute_brier(
-            confidences=all_confidences[0],
-            correctness=all_targets[0]),
-        "ece_auc": 100 * metrics.compute_ece(
-            confidences=all_confidences[0],
-            correctness=all_targets[0],
-            p=2),
-        "mce_auc": 100 * metrics.compute_ece(
-            confidences=all_confidences[0],
-            correctness=all_targets[0],
-            p="max"),
-        "acc_auc": 100 * metrics.compute_accuracy(
-            correctness=all_targets[0]),
-    }
-    for name, weights in all_weights.items():
-        eces = []
-        mces = []
-        briers = []
-        accs = []
-        for coverage in np.arange(0.0, 1.01, 0.01):
-            ece, mce, brier, acc = metrics.compute_marginal_metrics(
-                confidences=all_confidences,
-                correctness=all_targets,
-                weights=weights,
-                coverage=coverage)["selective"]
-            briers.append((coverage, brier[0]))
-            eces.append((coverage, ece[0]))
-            mces.append((coverage, mce[0]))
-            accs.append((coverage, acc[0]))
-        ece_auc = metrics.compute_auc(eces)
-        mce_auc = metrics.compute_auc(mces)
-        brier_auc = metrics.compute_auc(briers)
-        acc_auc = metrics.compute_auc(accs)
-        results[name] = {
-            "brier": briers,
-            "brier_auc": brier_auc,
-            "ece": eces,
-            "ece_auc": ece_auc,
-            "mce": mces,
-            "mce_auc": mce_auc,
-            "acc": accs,
-            "acc_auc": acc_auc,
-        }
-
-    return results
+    # Average results per metric across datasets.
+    all_metrics = {k: metrics.reduce_mean(v) for k, v in all_metrics.items()}
 
 
-def main():
-    """Main script for training and evaluation."""
+def main(args):
     torch.manual_seed(1)
     np.random.seed(1)
-    os.makedirs(args.save, exist_ok=True)
+    os.makedirs(os.path.dirname(args.output_file), exist_ok=True)
 
-    all_results = collections.defaultdict(list)
-    total = len(args.model_files) * args.bootstraps * (len(CORRUPTIONS) + 1)
-    with tqdm.tqdm(total=total) as pbar:
-        # Do for each model and bootstrap.
-        for model_file in args.model_files:
-            checkpoint = torch.load(model_file)
-            input_dim, hidden_dim, num_layers = checkpoint["model"]
-            selector = models.SelectiveNet(
-                input_dim=input_dim,
-                hidden_dim=hidden_dim,
-                num_layers=num_layers)
-            selector.load_state_dict(checkpoint["state_dict"])
-            selector = selector.to(device)
+    args.cuda = torch.cuda.is_available() and not args.use_cpu
+    print('Using CUDA' if args.cuda else 'Using CPU')
+    device = torch.device('cuda:0' if args.cuda else 'cpu')
 
-            for name in ["clean"] + CORRUPTIONS:
-                filename = f"test_{name}.pt"
-                path = os.path.join(checkpoint["data"], filename)
-                dataset = load_dataset(path)
-                for bootstrap in range(args.bootstraps):
+    results = collections.defaultdict(list)
+    for filename in args.datasets:
+        basename = os.path.basename(filename)
+        print(f'Evaluating {basename}')
+        dataset = torch.utils.data.TensorDataset(*torch.load(filename))
+
+        # Evaluate model and data bootstrap samples.
+        with tqdm.tqdm(total=len(args.model_files) * args.bootstraps):
+            for model_file in args.model_files:
+                checkpoint = torch.load(model_file)
+                input_dim, hidden_dim, num_layers = checkpoint["model"]
+                selector = models.SelectiveNet(
+                    input_dim=input_dim,
+                    hidden_dim=hidden_dim,
+                    num_layers=num_layers)
+                selector.load_state_dict(checkpoint["state_dict"])
+                selector = selector.to(device)
+                for bootstrap in args.num_bootstraps:
                     indices = np.random.randint(len(dataset), size=len(dataset))
                     subset = torch.utils.data.Subset(dataset, indices)
                     loader = torch.utils.data.DataLoader(
@@ -154,11 +154,11 @@ def main():
                         batch_size=args.batch_size,
                         shuffle=False,
                         pin_memory=args.cuda)
-                    results = evaluate(selector, loader)
-                    all_results[name].append(results)
-                    pbar.update()
-    torch.save(all_results, os.path.join(args.save, "all_results.pt"))
+                    results[basename].append(evaluate_model(selector, loader))
+
+    torch.save(results, args.output_file)
 
 
 if __name__ == "__main__":
-  main()
+    args = parser.parse_args()
+    main(args)

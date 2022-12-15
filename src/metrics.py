@@ -9,9 +9,15 @@ import numpy as np
 
 from src import utils
 
+# Default minimum coverage level to evaluate.
+MIN_COVERAGE = 0.05
+
+# Number of numerical integration points to use for AUC.
 NUM_AUC_VALUES = 50
 
-AUC = collections.namedtuple('AUC', ['auc', 'values'])
+AUCResult = collections.namedtuple('AUCResult', ['auc', 'values'])
+
+CoverageResult = collections.namedtuple('CoverageResult', ['coverage', 'value'])
 
 
 def compute_auc(values):
@@ -21,25 +27,101 @@ def compute_auc(values):
     return area
 
 
+def reduce_mean(results):
+    """Combine results to compute a mean metric."""
+    if isinstance(results[0], CoverageResult):
+        return CoverageResult(
+            np.mean([res.coverage for res in results]),
+            np.mean([res.value for res in results]))
+    elif isinstance(results[0], AUCResult):
+        # Reduction is done over coverages, and then we recompute AUC.
+        values = []
+        for idx in range(len(results[0].values)):
+            coverage = np.mean([res.values[idx].coverage for res in results])
+            value = np.mean([res.values[idx].value for res in results])
+            values.append(CoverageResult(coverage, value))
+        return AUCResult(compute_auc(values), values)
+    else:
+        raise ValueError('Unsupported result type.')
+
+
+def compute_metric_at_coverage(
+    outputs,
+    targets,
+    weights,
+    metric_fn,
+    coverage,
+):
+    """Compute given metric function at a specified coverage level.
+
+    Args:
+        outputs: Score of f(X) in E[Y | f(X)]. Size [num_examples].
+        targets: Target value Y in E[Y | f(X)]. Size [num_examples].
+        weights: Soft outputs of \tilde{g}(X). Size [num_examples].
+        metric_fn: Callable for fn(outputs, targets).
+        coverage: Desired selective coverage level.
+
+    Returns:
+       A CoverageResult.
+    """
+    threshold = utils.calibrate(weights, coverage)
+    take = weights.ge(threshold)
+    value = metric_fn(outputs[take], targets[take])
+    return CoverageResult(coverage, value)
+
+
 def compute_metric_auc(
     outputs,
     targets,
     weights,
     metric_fn,
+    min_coverage=MIN_COVERAGE,
     num_auc_values=NUM_AUC_VALUES,
 ):
-    """Compute AUC of the given metric function."""
+    """Compute AUC of the given metric function.
+
+    Args:
+        outputs: Score of f(X) in E[Y | f(X)]. Size [num_examples].
+        targets: Target value Y in E[Y | f(X)]. Size [num_examples].
+        weights: Soft outputs of \tilde{g}(X). Size [num_examples].
+        metric_fn: Callable for fn(outputs, targets).
+        min_coverage: Minimum coverage level to start from.
+        num_auc_values: Number of discrete numerical integration points.
+
+    Returns:
+       An AUCResult containing the auc and a list of CoverageResults.
+    """
     values = []
-    for coverage in np.linspace(0, 1, num_auc_values):
-        threshold = utils.calibrate(weights, coverage)
-        take = weights.ge(threshold)
-        metric = metric_fn(outputs[take], targets[take])
-        values.append((coverage, metric))
-    return AUC(compute_auc(values), values)
+    for coverage in np.linspace(min_coverage, 1, num_auc_values):
+        values.append(compute_metric_at_coverage(
+            outputs, targets, weights, coverage, metric_fn))
+    return AUCResult(compute_auc(values), values)
 
 
 def compute_accuracy(outputs, targets, is_binary=True):
-    """Compute accuracy of outputs."""
+    """Compute accuracy of the predictions.
+
+    The outputs and targets are either assumed to be
+
+    (1) A binary label Y and the prediction score p(Y = 1 | X). In this case,
+        the simple classification rule \hat{Y} = 1{p(Y = 1 | X) ≥ 0.5} is
+        applied, and the accuracy is computed by comparing \hat{Y} to Y.
+
+    (2) The original task is a multi-class prediction problem, and targets
+        already represents the "correctness" reduction, Y = argmax p(y | X).
+        In this case, the accuracy is simple the average target value.
+
+    Args:
+        outputs: Score of f(X) in E[Y | f(X)]. Size [num_selected].
+        targets: Target value Y in E[Y | f(X)]. Size [num_selected].
+        is_binary: Whether to treat Y as an original binary label.
+
+    Returns:
+        The model accuracy.
+    """
+    if len(outputs) == 0:
+        return 1
+
     if is_binary:
         # Outputs = f(X), and targets = binary Y.
         acc = outputs.ge(0.5).eq(targets).mean()
@@ -50,7 +132,18 @@ def compute_accuracy(outputs, targets, is_binary=True):
 
 
 def compute_brier_score(outputs, targets):
-    """Compute the Brier Score, E[(Y - f(X))^2]."""
+    """Compute the Brier Score, E[(Y - f(X))^2].
+
+    Args:
+        outputs: Score of f(X) in E[Y | f(X)]. Size [num_selected].
+        targets: Target value Y in E[Y | f(X)]. Size [num_selected].
+
+    Returns:
+        The Brier score.
+    """
+    if len(outputs) == 0:
+        return 0
+
     return F.mse_loss(outputs.view(-1), targets.view(-1)).item()
 
 
@@ -58,8 +151,8 @@ def compute_ece(outputs, targets, num_bins=15, min_bin_size=50, pnorm=2):
     """Helper for computing ECE.
 
     Args:
-        outputs: Score of f(X) in E[Y | f(X)].
-        targets: Target value Y in E[Y | f(X)].
+        outputs: Score of f(X) in E[Y | f(X)]. Size [num_selected].
+        targets: Target value Y in E[Y | f(X)]. Size [num_selected].
         num_bins: Largest number of bins to use when computing ECE.
         min_bin_size: Minumum bin size when dividing data.
         pnorm: Value of p to use when computing l_p norm.

@@ -111,6 +111,7 @@ def save_model(filename, epoch, selector, optimizer):
         'epoch': epoch,
         'state_dict': selector.state_dict(),
         'optimizer': optimizer.state_dict(),
+        'model': (selector.input_dim, selector.hidden_dim, selector.num_layers),
     }
     torch.save(checkpoint, filename)
 
@@ -284,14 +285,8 @@ def main(args):
     torch.save(args, os.path.join(args.model_dir, 'args.pt'))
 
     # Set device.
-    if args.use_cpu or not torch.cuda.is_available:
-        logging.info('Using CPU')
-        args.cuda = False
-        device = torch.device('cpu')
-    else:
-        logging.info('Using CUDA')
-        args.cuda = True
-        device = torch.device('cuda')
+    args.cuda = torch.cuda.is_available() and not args.use_cpu
+    device = torch.device("cuda:0" if args.cuda else "cpu")
 
     # --------------------------------------------------------------------------
     #
@@ -300,9 +295,6 @@ def main(args):
     # --------------------------------------------------------------------------
     logging.info('Loading data...')
     cal_dataset = torch.utils.data.TensorDataset(*torch.load(args.cal_dataset))
-    # data = torch.load(args.cal_dataset)
-    # data = [data[-1], data[2], data[0], data[1]]
-    # cal_dataset = torch.utils.data.TensorDataset(*data)
     cal_loader = torch.utils.data.DataLoader(
         dataset=cal_dataset,
         batch_size=args.train_batch_size,
