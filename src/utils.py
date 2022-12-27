@@ -1,6 +1,8 @@
 """Random functions."""
 
 import math
+import os
+
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -111,3 +113,14 @@ def calibrate(weights, coverage):
     index = max(0, math.ceil(coverage * len(values)) - 1)
     threshold = values[index].item()
     return threshold
+
+
+def check_nonempty(dirname):
+    """Check if a directory is non-empty."""
+    if not os.path.exists(dirname):
+        return False
+    if not os.path.isdir(dirname):
+        raise ValueError(f'{dirname} is not a directory.')
+    if len(os.listdir(dirname)) > 0:
+        return True
+    return False

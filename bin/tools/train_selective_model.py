@@ -3,6 +3,7 @@
 import argparse
 import logging
 import os
+import shutil
 import sys
 import tempfile
 
@@ -27,8 +28,12 @@ parser.add_argument(
     help='Path to BatchedInputDataset storing perturbed validation data.')
 
 parser.add_argument(
-    '--model-dir', type=float, default=None,
+    '--model-dir', type=str, default=None,
     help='Directory for saving model and logs.')
+
+parser.add_argument(
+    '--overwrite', action='store_true',
+    help='Overwrite model_dir if it already exists.')
 
 parser.add_argument(
     '--hidden-dim', type=int, default=64,
@@ -99,18 +104,15 @@ parser.add_argument(
     help='Number of data loader background processes.')
 
 
-def save_model(filename, epoch, selector, optimizer):
-    """Save model and optimizer state to file.
+def save_model(filename, selector):
+    """Save model to file.
 
     Args:
-        epoch: Current epoch.
+        filename: Destination to save model to.
         selector: SelectiveNet nn.Module implementing the selector g(X).
-        optimizer: Torch optimizer for updating the selector.
     """
     checkpoint = {
-        'epoch': epoch,
-        'state_dict': selector.state_dict(),
-        'optimizer': optimizer.state_dict(),
+        'state_dict': selector.cpu().state_dict(),
         'model': (selector.input_dim, selector.hidden_dim, selector.num_layers),
     }
     torch.save(checkpoint, filename)
@@ -268,6 +270,13 @@ def main(args):
 
     if args.model_dir is None:
         args.model_dir = tempfile.mkdtemp()
+
+    if utils.check_nonempty(args.model_dir):
+        if not args.overwrite:
+            raise RuntimeError(
+                'model-dir already exists! Use --overwrite to continue.')
+        else:
+            shutil.rmtree(args.model_dir)
     os.makedirs(args.model_dir, exist_ok=True)
 
     logging.basicConfig(
@@ -339,7 +348,7 @@ def main(args):
     #
     # --------------------------------------------------------------------------
     # Save initial model.
-    checkpoint_name = os.path.join(args.model_dir, 'model_best.pt')
+    checkpoint_name = os.path.join(args.model_dir, 'model.pt')
     save_model(checkpoint_name, 0, selector, optimizer)
     logging.info("=" * 88)
     results = evaluate_model(selector, val_loader)

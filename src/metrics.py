@@ -15,42 +15,45 @@ MIN_COVERAGE = 0.05
 # Number of numerical integration points to use for AUC.
 NUM_AUC_VALUES = 50
 
-AUCResult = collections.namedtuple('AUCResult', ['auc', 'values'])
+CoverageResult = collections.namedtuple(
+    'CoverageResult', ['coverage', 'mean', 'std'], defaults=[None, None, None])
 
-CoverageResult = collections.namedtuple('CoverageResult', ['coverage', 'value'])
+AUCResult = collections.namedtuple(
+    'AUCResult', ['auc', 'values'], defaults=[None, None])
 
 
 def compute_auc(values):
     """Compute the area under the curve using the trapezoidal method."""
-    xs, ys = zip(*values)
+    xs, ys, _ = zip(*values)
     area = np.trapz(ys, xs) / (max(xs) - min(xs) + 1e-8)
     return area
 
 
-def reduce_mean(results):
-    """Combine results to compute a mean metric."""
-    if isinstance(results[0], CoverageResult):
-        return CoverageResult(
-            np.mean([res.coverage for res in results]),
-            np.mean([res.value for res in results]))
-    elif isinstance(results[0], AUCResult):
-        # Reduction is done over coverages, and then we recompute AUC.
-        values = []
-        for idx in range(len(results[0].values)):
-            coverage = np.mean([res.values[idx].coverage for res in results])
-            value = np.mean([res.values[idx].value for res in results])
-            values.append(CoverageResult(coverage, value))
-        return AUCResult(compute_auc(values), values)
-    else:
-        raise ValueError('Unsupported result type.')
+def reduce_mean_coverage(results):
+    """List of coverage results."""
+    coverage = np.mean([res.coverage for res in results])
+    mean = np.mean([res.mean for res in results])
+    std = np.std([res.mean for res in results])
+    return CoverageResult(coverage, mean, std)
+
+
+def reduce_mean_auc(results):
+    """List of AUCResults."""
+    values = []
+    for idx in range(len(results[0].values)):
+        coverage = np.mean([res.values[idx].coverage for res in results])
+        mean = np.mean([res.values[idx].mean for res in results])
+        std = np.std([res.values[idx].mean for res in results])
+        values.append(CoverageResult(coverage, mean, std))
+    return AUCResult(compute_auc(values), values)
 
 
 def compute_metric_at_coverage(
     outputs,
     targets,
     weights,
-    metric_fn,
     coverage,
+    metric_fn,
 ):
     """Compute given metric function at a specified coverage level.
 
@@ -58,8 +61,8 @@ def compute_metric_at_coverage(
         outputs: Score of f(X) in E[Y | f(X)]. Size [num_examples].
         targets: Target value Y in E[Y | f(X)]. Size [num_examples].
         weights: Soft outputs of \tilde{g}(X). Size [num_examples].
-        metric_fn: Callable for fn(outputs, targets).
         coverage: Desired selective coverage level.
+        metric_fn: Callable for fn(outputs, targets).
 
     Returns:
        A CoverageResult.
@@ -67,7 +70,7 @@ def compute_metric_at_coverage(
     threshold = utils.calibrate(weights, coverage)
     take = weights.ge(threshold)
     value = metric_fn(outputs[take], targets[take])
-    return CoverageResult(coverage, value)
+    return CoverageResult(coverage, value, None)
 
 
 def compute_metric_auc(
@@ -124,10 +127,10 @@ def compute_accuracy(outputs, targets, is_binary=True):
 
     if is_binary:
         # Outputs = f(X), and targets = binary Y.
-        acc = outputs.ge(0.5).eq(targets).mean()
+        acc = outputs.ge(0.5).eq(targets).float().mean()
     else:
         # Outputs = max f(y | x) and targets = correctness.
-        acc = targets.mean()
+        acc = targets.float().mean()
     return acc.item()
 
 

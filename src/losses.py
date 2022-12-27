@@ -3,13 +3,6 @@
 import torch
 
 
-# ------------------------------------------------------------------------------
-#
-# Helpers to compute components of the SMMCE_u loss.
-#
-# ------------------------------------------------------------------------------
-
-
 def laplacian_kernel(values_i, values_j, width=0.2):
     """Compute the Laplace kernel k(_i, v_j) = exp(-|v_i - v_j| / width).
 
