@@ -7,7 +7,6 @@ import multiprocessing.dummy as d_mp
 import os
 
 import numpy as np
-import prettytable
 import torch
 import torch.multiprocessing as t_mp
 import tqdm
@@ -50,7 +49,7 @@ parser.add_argument(
     '--num-workers', type=int, default=16,
     help='Number of processes used to compute final results.')
 
-# Map of name to function for metrics we compute.
+# Map of name to function for default metrics we compute.
 METRICS = collections.OrderedDict((
     # The selective l_2 calibration error.
     ('ce_2', functools.partial(metrics.compute_ece, pnorm=2)),
@@ -77,28 +76,6 @@ METHODS = collections.OrderedDict((
     ('isoforest', (HIGHER, -2)),
     ('lof', (HIGHER, -1)),
 ))
-
-
-def print_results(dataset_to_avg_result):
-    """Print results to stdout."""
-    datasets = sorted(dataset_to_avg_result.keys())
-    for dataset in datasets:
-        methods = dataset_to_avg_result[dataset]
-        print(f'Dataset: {dataset}')
-        table = prettytable.PrettyTable()
-        table.field_names = list(['method'] + list(METRICS.keys()))
-        for name, results in methods.items():
-            row = [name]
-            for metric in METRICS.keys():
-                result = results[metric]
-                if isinstance(result, metrics.CoverageResult):
-                    row.append(f'{100 * result.mean:2.2f}')
-                elif isinstance(result, metrics.AUCResult):
-                    row.append(f'{100 * result.auc:2.2f}')
-                else:
-                    raise ValueError('Unknown result type')
-            table.add_row(row)
-        print(table)
 
 
 def evaluate_model(selector, data_loader, coverage=-1, method='selector'):
@@ -215,10 +192,11 @@ def main(args):
         pool = d_mp.Pool(1)
 
     # Results for all files.
-    # Will be a dict of dataset --> method --> avg AUCResult or CoverageResult.
+    # Will be a dict of dataset --> method --> metric --> result.
     dataset_to_results = collections.defaultdict(
         lambda: collections.defaultdict(lambda: collections.defaultdict(list)))
 
+    # Initialize all evaluation jobs and add to queue.
     jobs = []
     total = len(args.model_files) * args.bootstraps * len(args.datasets)
     with tqdm.tqdm(total=total, desc='adding jobs to queue') as pbar:
@@ -258,6 +236,7 @@ def main(args):
                         jobs.append((name, method, pool.apply_async(eval_fn)))
                     pbar.update()
 
+    # Wait for all results to compute.
     for name, method, results in tqdm.tqdm(jobs, desc='computing jobs'):
         results = results.get()
         for k, v in results.items():
@@ -278,7 +257,7 @@ def main(args):
             for k, v in results.items():
                 dataset_to_avg_result[dataset][method][k] = reduce_fn(v)
 
-    print_results(dataset_to_avg_result)
+    print(metrics.format_metrics(dataset_to_avg_result, METRICS.keys()))
     torch.save(dataset_to_avg_result, args.output_file)
 
 

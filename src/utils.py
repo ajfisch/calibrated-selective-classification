@@ -29,8 +29,8 @@ def format_train_metrics(iteration, total_iterations, loss, smmce, coverage):
     return "   ".join(string)
 
 
-def format_eval_metrics(results):
-    """Format evaluation results.
+def format_validation_metrics(results):
+    """Format validation results.
 
     Args:
         results: List of AUC results for all datasets.

@@ -1,8 +1,9 @@
 """Extra metrics."""
 
-import math
 import collections
+import math
 
+import prettytable
 import torch
 import torch.nn.functional as F
 import numpy as np
@@ -20,6 +21,41 @@ CoverageResult = collections.namedtuple(
 
 AUCResult = collections.namedtuple(
     'AUCResult', ['auc', 'values'], defaults=[None, None])
+
+
+def format_metrics(dataset_to_result, metric_names=None):
+    """Format test results as PrettyTables.
+
+    Args:
+        dataset_to_result: A dict of dataset --> method --> metric --> result.
+        metric_names: A list of metrics to include.
+
+    Returns:
+        A formatted string.
+    """
+    metric_names = metric_names or ['ce_2', 'ce_inf', 'brier', 'acc']
+    datasets = sorted(dataset_to_result.keys())
+    if len(set(datasets) - {'avg'}) == 1:
+        datasets = [d for d in datasets if d != 'avg']
+    string = []
+    for dataset in datasets:
+        methods = dataset_to_result[dataset]
+        string += [f'\nDataset: {dataset}']
+        table = prettytable.PrettyTable()
+        table.field_names = ['method'] + list(metric_names)
+        for name, results in methods.items():
+            row = [name]
+            for metric in metric_names:
+                result = results[metric]
+                if isinstance(result, CoverageResult):
+                    row.append(f'{100 * result.mean:2.2f}')
+                elif isinstance(result, AUCResult):
+                    row.append(f'{100 * result.auc:2.2f}')
+                else:
+                    raise ValueError('Unknown result type')
+            table.add_row(row)
+        string.append(table.get_string())
+    return '\n'.join(string)
 
 
 def compute_auc(values):
