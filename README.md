@@ -63,7 +63,7 @@ A `BatchedInputDataset` is exactly the same as the above `InputDataset`, with th
 
 ```
 python bin/tools/check_calibration_error.py \
-  --dataset <path to saved InputDatast or BatchedInputDataset>
+  --datasets <paths to saved InputDatasts and/or BatchedInputDatasets>
 ```
 
 ### Generating features
