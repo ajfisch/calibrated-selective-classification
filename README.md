@@ -147,7 +147,7 @@ If you find this work useful, please cite our TMLR paper:
     title={Calibrated Selective Classification},
     author={Adam Fisch and Tommi Jaakkola and Regina Barzilay},
     journal={Transactions on Machine Learning Research (TMLR)},
-    month={Nov},
+    month={12},
     year={2022},
     url={https://openreview.net/forum?id=zFhNBs8GaV},
 }
