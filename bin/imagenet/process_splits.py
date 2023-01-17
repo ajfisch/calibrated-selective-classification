@@ -1,92 +1,46 @@
-"""Process datasets to be in the desired format.
+"""Process ImageNet datasets to be in the desired format.
 
 For each dataset we compute a tuple of:
-    (1) Input features (x, or a featurization phi(x) using the given network).
-    (2) Output probabilities p(y | x) for every y \in [K], assuming K classes.
+    (1) Input features \phi(x), here defined as projected ResNet50 features.
+    (2) Output probabilities p(y | x) for every y \in [K], where K = 1000.
     (3) Model confidence f(X), here defined as max p(y | x).
-    (3) Target label Y, here defined as 1{y = argmax p(y | x)}.
+    (4) Target label Y, here defined as 1{y = argmax p(y | x)}.
 
 See src.data.InputDataset.
 """
 
 import argparse
-import functools
 import os
+
 import numpy as np
-
-import torchvision.models as models
+from torchvision.models import resnet50, ResNet50_Weights
 import torch
+import torch.nn as nn
 
+import third_party.augmentations
 from src.data import image_datasets
 
 parser = argparse.ArgumentParser()
 
 parser.add_argument(
-    '--data-dir', type=str, default='data/processed/imagenet',
+    '--data-dir', type=str, default='data/datasets/imagenet',
     help='Directory where dataset splits (e.g., test_images.npy) are saved.')
 
 parser.add_argument(
     '--output-dir', type=str, default='data/processed/imagenet',
     help='Directory where processed outputs will be saved.')
 
-parser.add_argument(
-    '--num-cal-batches', type=int, default=50000,
-    help='Number of perturbed batches to sample for calibration.')
+image_datasets.add_argparse_arguments(parser)
 
-parser.add_argument(
-    '--num-val-batches', type=int, default=1000,
-    help='Number of perturbed batches to sample for validation.')
-
-parser.add_argument(
-    '-batch-size', type=int, default=1024,
-    help='Number of examples per batch, also per "perturbed dataset".')
-
-parser.add_argument(
-    '--temperature-scale', action='store_true',
-    help='Perform temperature scaling over raw f(X) network outputs.')
-
-parser.add_argument(
-    '--num-temperature-scaling-batches', type=int, default=100,
-    help='Number of batches to use for temperature scaling.')
-
-parser.add_argument(
-    '--use-augmix-with-temperature-scaling', action='store_true',
-    help='Perform temperature scaling using AugMix perturbed data.')
-
-parser.add_argument(
-    '--mixture-width', type=int, default=3,
-    help='Number of augmentation chains to sample and mix.')
-
-parser.add_argument(
-    '--mixture-depth', type=int, default=-1,
-    help='Number of augmentations per chain. Unif[1, 3] if set to -1.')
-
-parser.add_argument(
-    '--aug-severity', type=int, default=5,
-    help='Augmentation level, higher is stronger.')
-
-parser.add_argument(
-    '--independent_perturbations', action='store_true',
-    help='Do not share perturbations across "datasets"/sample per example.')
-
-parser.add_argument(
-    '--use-cpu', action='store_true',
-    help='Run on CPU instead of GPU.')
-
-parser.add_argument(
-    '--batch-size', type=int, default=512,
-    help='Batch size to use over GPU when deriving features/output probs.')
-
-parser.add_argument(
-    '--num-workers', type=int, default=16,
-    help='Number of processes to use during data loading.')
+third_party.augmentations.IMAGE_SIZE = 224
 
 
-class ResNet50():
+class ResNet50(nn.Module):
+    """Pre-trained ResNet50 wrapper."""
 
     def __init__(self):
         super(ResNet50, self).__init__()
-        self.net = models.resnet50(pretrained=True)
+        self.net = resnet50(weights=ResNet50_Weights.IMAGENET1K_V1)
 
     def get_features(self, x):
         x = self.net.conv1(x)
@@ -111,129 +65,30 @@ def main(args):
     torch.manual_seed(1)
     np.random.seed(1)
 
-    print(f'Will save results to {args.output_dir}.')
-    os.makedirs(args.output_dir, exist_ok=True)
-
-    # --------------------------------------------------------------------------
-    #
-    # Load datasets and base model.
-    #
-    # --------------------------------------------------------------------------
     print('Loading datasets...')
+    # For train/cal/val we just use different random samples from train.
     splits = {
         'train': image_datasets.ImageNetDataset(
-            os.path.join(args.data_dir, 'train_images.npy'),
-            os.path.join(args.data_dir, 'train_labels.npy')),
+            os.path.join(args.data_dir, 'train')),
         'cal': image_datasets.ImageNetDataset(
-            os.path.join(args.data_dir, 'cal_images.npy'),
-            os.path.join(args.data_dir, 'cal_labels.npy')),
+            os.path.join(args.data_dir, 'train')),
         'val': image_datasets.ImageNetDataset(
-            os.path.join(args.data_dir, 'val_images.npy'),
-            os.path.join(args.data_dir, 'val_labels.npy')),
+            os.path.join(args.data_dir, 'train')),
         'test_clean': image_datasets.ImageNetDataset(
-            os.path.join(args.data_dir, 'test_images.npy'),
-            os.path.join(args.data_dir, 'test_labels.npy')),
+            os.path.join(args.data_dir, 'val')),
     }
     for corruption in image_datasets.IMAGENET_CORRUPTIONS:
         splits[f'test_{corruption}'] = image_datasets.ImageNetDataset(
-            os.path.join(args.data_dir, 'CIFAR-10-C', f'{corruption}.npy'),
-            os.path.join(args.data_dir, 'CIFAR-10-C', 'labels.npy'))
+            os.path.join(args.data_dir, 'imagenet-c-combined', f'{corruption}'))
 
     print('Initializing model...')
     net = ResNet50()
-    device = torch.device('cuda:0' if args.cuda else 'cpu')
-    net = net.to(device)
-    net.device = device
 
-    # --------------------------------------------------------------------------
-    #
-    # Optionally apply temperature scaling.
-    #
-    # --------------------------------------------------------------------------
-    if args.temperature_scale:
-        print('\nTemperature scaling...')
-        # Either use the augmix dataloader or the clean one.
-        if args.use_augmix_with_temperature_scaling:
-            dataloader_fn = functools.partial(
-                image_datasets.get_augmix_image_dataloader,
-                mixture_width=args.mixture_width,
-                mixture_depth=args.mixture_depth,
-                severity=args.aug_severity,
-                independent_perturbations=True)
-        else:
-            dataloader_fn = image_datasets.get_clean_image_dataloader
-
-        # Note: Temp. scaling reuses the same calibration data used later.
-        loader = dataloader_fn(
-            dataset=splits['cal'],
-            batch_size=args.batch_size,
-            num_batches=args.num_temperature_scaling_batches,
-            num_workers=args.num_workers,
-            pin_memory=args.cuda)
-
-        # Optimize the temperature for temp. scaling.
-        temperature = image_datasets.compute_temperature(net, loader)
-        print(f'\tTemperature = {temperature:2.4f}')
-    else:
-        temperature = 1
-
-    # --------------------------------------------------------------------------
-    #
-    # Process a limited amount of training data for features/derived models.
-    #
-    # --------------------------------------------------------------------------
-    print('\nProcessing training data.')
-    loader = image_datasets.get_clean_image_dataloader(
-        dataset=splits['train'],
-        batch_size=args.batch_size,
-        num_batches=-1,  # Take whole dataset.
-        num_workers=args.num_workers,
-        pin_memory=args.cuda)
-    ds = image_datasets.convert_image_dataset(
-        net, loader, temperature, keep_batches=False)
-    torch.save(ds, os.path.join(args.output_dir, f'train.pt'))
-
-    # --------------------------------------------------------------------------
-    #
-    # Process perturbed datasets (calibration + validation data).
-    #
-    # --------------------------------------------------------------------------
-    for split in ['cal', 'val']:
-        print(f'\nProcessing pertubed {split} dataset.')
-        loader = image_datasets.get_augmix_image_dataloader(
-            dataset=splits[split],
-            batch_size=args.batch_size,
-            num_batches=(args.num_cal_batches if split == 'cal'
-                         else args.num_val_batches),
-            mixture_width=args.mixture_width,
-            mixture_depth=args.mixture_depth,
-            severity=args.aug_severity,
-            independent_perturbations=False,
-            num_workers=args.num_workers,
-            pin_memory=args.cuda)
-        ds = image_datasets.convert_image_dataset(
-            net, loader, temperature, keep_batches=True)
-        torch.save(ds, os.path.join(args.output_dir, f'p{split}.pt'))
-
-    # --------------------------------------------------------------------------
-    #
-    # Process all test datasets.
-    #
-    # --------------------------------------------------------------------------
-    print('\nProcessing test datasets.')
-    for split in filter(lambda k: k.startswith('test'), splits.keys()):
-        loader = image_datasets.get_clean_image_dataloader(
-            dataset=splits[split],
-            batch_size=args.batch_size,
-            num_batches=-1,  # Take whole dataset.
-            num_workers=args.num_workers,
-            pin_memory=args.cuda)
-        ds = image_datasets.convert_image_dataset(
-            net, loader, temperature, keep_batches=False)
-        torch.save(ds, os.path.join(args.output_dir, f'{split}.pt'))
+    print(f'Will save results to {args.output_dir}.')
+    os.makedirs(args.output_dir, exist_ok=True)
+    image_datasets.process_image_splits(args, net, splits, args.output_dir)
 
 
 if __name__ == '__main__':
     args = parser.parse_args()
-    args.cuda = torch.cuda.is_available() and not args.use_cpu
     main(args)
