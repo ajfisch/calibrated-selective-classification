@@ -13,6 +13,10 @@ parser.add_argument(
     '--datasets', type=str, nargs='+',
     help='Paths to dataset to evaluate.')
 
+parser.add_argument(
+    '--is-binary', action='store_true',
+    help='If true, label Y is treated as binary vs. "is correct" reduction.')
+
 # Map of name to function for metrics we compute.
 METRICS = collections.OrderedDict((
     # The l_2 calibration error.
@@ -27,6 +31,11 @@ METRICS = collections.OrderedDict((
 
 
 def main(args):
+    # Specify if is_binary in accuracy computation.
+    if args.is_binary:
+        METRICS['acc'] = functools.partial(
+            metrics.compute_accuracy, is_binary=True)
+
     # Keep track of all results + the average.
     dataset_to_results = {'avg': {'full': collections.defaultdict(list)}}
     for dataset in tqdm.tqdm(args.datasets, 'evaluating datasets'):
