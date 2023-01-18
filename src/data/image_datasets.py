@@ -460,10 +460,12 @@ def convert_image_dataset(
     Returns:
         An instance of InputDataset or BatchedInputDataset.
     """
-    all_confidences = []
-    all_features = []
-    all_probs = []
-    all_labels = []
+    N, M = len(loader), loader.batch_size
+    all_features = None
+    all_probs = None
+    all_confidences = torch.empty(N, M)
+    all_labels = torch.empty(N, M)
+    idx = count = 0
     with torch.no_grad():
         for images, targets in tqdm.tqdm(loader, desc='processing dataset'):
             features, logits = compute_subbatches(net, images, svd)
@@ -471,16 +473,23 @@ def convert_image_dataset(
             confidences = torch.max(probs, dim=1)[0]
             labels = targets.eq(torch.argmax(probs, dim=1)).float()
 
-            all_features.append(features)
-            all_confidences.append(confidences)
-            all_probs.append(probs)
-            all_labels.append(labels)
+            if all_features is None:
+                all_features = torch.empty(N, M, features.size(-1))
+                all_probs = torch.empty(N, M, probs.size(-1))
 
-    combine_fn = torch.stack if keep_batches else torch.cat
-    all_confidences = combine_fn(all_confidences, dim=0)
-    all_features = combine_fn(all_features, dim=0)
-    all_probs = combine_fn(all_probs, dim=0)
-    all_labels = combine_fn(all_labels)
+            all_features[idx] = features
+            all_confidences[idx] = confidences
+            all_probs[idx] = probs
+            all_labels[idx] = labels
+
+            idx += 1
+            count += len(images)
+
+    if not keep_batches:
+        all_features = all_features.view(N * M, -1)[:count]
+        all_probs = all_probs.view(N * M, -1)[:count]
+        all_confidences = all_confidences.view(N * M)[:count]
+        all_labels = all_labels.view(N * M)[:count]
 
     cls = InputDataset if not keep_batches else BatchedInputDataset
     return cls(

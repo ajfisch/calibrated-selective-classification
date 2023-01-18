@@ -28,7 +28,7 @@ parser.add_argument(
 
 parser.add_argument(
     '--output-file', type=str,
-    help='Path to directory where results will be saved.')
+    help='Path to file where results will be saved.')
 
 parser.add_argument(
     '--is-binary', action='store_true',
