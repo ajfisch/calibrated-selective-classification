@@ -137,7 +137,7 @@ def compute_metric_auc(
     return AUCResult(compute_auc(values), values)
 
 
-def compute_accuracy(outputs, targets, is_binary=True):
+def compute_accuracy(outputs, targets, is_binary=False):
     """Compute accuracy of the predictions.
 
     The outputs and targets are either assumed to be

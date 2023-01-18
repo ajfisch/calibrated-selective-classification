@@ -48,7 +48,7 @@ IMAGENET_CORRUPTIONS = [
     'zoom_blur'
 ]
 
-GPU_BATCH_SIZE = 512
+GPU_BATCH_SIZE = 256
 
 
 def set_gpu_batch_size(batch_size):

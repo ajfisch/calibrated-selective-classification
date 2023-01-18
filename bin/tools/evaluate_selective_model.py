@@ -5,6 +5,7 @@ import collections
 import functools
 import multiprocessing.dummy as d_mp
 import os
+import tempfile
 
 import numpy as np
 import torch
@@ -28,6 +29,10 @@ parser.add_argument(
 parser.add_argument(
     '--output-file', type=str,
     help='Path to directory where results will be saved.')
+
+parser.add_argument(
+    '--is-binary', action='store_true',
+    help='If true, label Y is treated as binary vs. "is correct" reduction.')
 
 parser.add_argument(
     '--bootstraps', type=int, default=5,
@@ -175,13 +180,23 @@ def evaluate_model(selector, data_loader, coverage=-1, method='selector'):
 def main(args):
     torch.manual_seed(1)
     np.random.seed(1)
-    dirname = os.path.dirname(args.output_file)
-    if dirname:
-        os.makedirs(dirname, exist_ok=True)
+    if not args.output_file:
+        with tempfile.NamedTemporaryFile(delete=False) as tmp:
+            args.output_file = tmp.name
+    else:
+        dirname = os.path.dirname(args.output_file)
+        if dirname:
+            os.makedirs(dirname, exist_ok=True)
+    print(f'Will save results to {args.output_file}')
 
     args.cuda = torch.cuda.is_available() and not args.use_cpu
     print('Using CUDA' if args.cuda else 'Using CPU')
     device = torch.device('cuda:0' if args.cuda else 'cpu')
+
+    # Specify if is_binary in accuracy computation.
+    if args.is_binary:
+        METRICS['acc'] = functools.partial(
+            metrics.compute_accuracy, is_binary=True)
 
     # Start a multiprocessing pool of workers.
     if args.cuda:
