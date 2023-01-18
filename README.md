@@ -90,6 +90,8 @@ python bin/tools/train_selective_model.py \
 ```
 The binary predictor $g(X) := 1 \[ \tilde{g}(X) \geq \tau \]$ is derived by calibrating a threshold for this soft predictor during evaluation (next).
 
+Pass `--model-dir` to specify a target directory to save the model (otherwise a temp directory will be used automatically).
+
 ## Evaluating a selective model
 
 > **Note** All of the subsequent evaluation steps simultaneously calibrate and evaluate the selector `g(X)` such that it acheives the target coverage. To derive a threshold for the soft selector, run 
@@ -114,7 +116,7 @@ If the coverage level $\xi$ is $\leq 0$, then the above command will output soft
 
 > **Warning** If the `calibration_dataset` argument is not given, then the threshold for making predictions the soft selector will be computed on the `input_dataset`. If, however, the `threshold` argument is given, then both the `calibration_dataset` and `coverage_level` arguments will be **ignored**, and the model will make predictions using the given threshold.
 
-To evaluate the selective predictor **without pre-computing predictions** in terms of selective calibration error, run:
+To evaluate the selective predictor in terms of selective calibration error, run:
 ```
 python bin/tools/evaluate_selective_model.py \
   --model_files <paths to saved SelectiveNet checkpoints> \
@@ -122,19 +124,7 @@ python bin/tools/evaluate_selective_model.py \
   --output_file <path to output file>
 ```
 If the coverage level $\xi$ is $\leq 0$, then the above command will compute the selective calibration error AUC.
-
-This script will compute the mean and standard deviation of each result across all given model samples, as well as $B$ bootstrap resamples of the test datasets (by default $B = 5$ and can be changed via the `--bootstraps` argument).
-
-Alternatively, to evaluate the selective predictor **after pre-computing predictions** (i.e., using the output of `run_selective_model.py`), run:
-```
-python bin/tools/evaluate_selective_model.py \
-  --input_datasets <path to saved InputDatasets> \
-  --output_files <path to saved output files from run_selective_model> \
-  --coverage_level <coverage level \xi> \
-  --output_file <path to output file>
-```
-> **Warning** Only specify `coverage_level` if the predictions have not yet been binarized.
-
+This script will compute the mean and standard deviation of each result across all given model samples, as well as $B$ bootstrap resamples of the test datasets (by default $B = 5$ and can be changed via the `--bootstraps` argument). Note that this will compute all predictions from scratch.
 
 ## Visualizing predictions
 
