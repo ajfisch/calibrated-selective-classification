@@ -43,12 +43,14 @@ Train the selector:
 ```
 python bin/tools/train_selective_model.py \
   --cal-dataset data/processed/imagenet/pcal.meta.pt \
-  --val-dataset data/processed/imagenet/pval.meta.pt
+  --val-dataset data/processed/imagenet/pval.meta.pt \
+  --model-dir data/models/imagenet/selector
 ```
 
 Evaluate the selector in terms of AUC, or at a desired coverage level (coverage > 0):
 ```
 python bin/tools/evaluate_selective_model.py \
   --datasets data/processed/imagenet/test*.meta.pt \
+  --model-files data/models/imagenet/selector/model.pt \
   --coverage -1
 ```
