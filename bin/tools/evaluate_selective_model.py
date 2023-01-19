@@ -27,7 +27,7 @@ parser.add_argument(
     help='Paths to datasets to evaluate.')
 
 parser.add_argument(
-    '--output-file', type=str,
+    '--output-file', type=str, default=None,
     help='Path to file where results will be saved.')
 
 parser.add_argument(
