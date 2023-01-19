@@ -15,7 +15,7 @@ from src.data import InputDataset
 parser = argparse.ArgumentParser()
 
 parser.add_argument(
-    '--model-file', type=str, nargs='+',
+    '--model-file', type=str,
     help='Path to model file.')
 
 parser.add_argument(
@@ -23,7 +23,7 @@ parser.add_argument(
     help='Path to dataset to evaluate.')
 
 parser.add_argument(
-    '--calibration-dataset', type=str,
+    '--calibration-dataset', type=str, default=None,
     help='Path to dataset to use as calibration.')
 
 parser.add_argument(
@@ -35,7 +35,7 @@ parser.add_argument(
     help='Pre-computed threshold to use to make selections.')
 
 parser.add_argument(
-    '--coverage', type=float, default=0.8,
+    '--coverage', type=float, default=-1,
     help='Target coverage level.')
 
 parser.add_argument(
@@ -76,7 +76,7 @@ def main(args):
     if args.threshold is None and args.coverage > 0:
         print('Loading calibration dataset...')
         dataset = torch.utils.data.TensorDataset(
-            *torch.load(args.calibration_dataset))
+            *torch.load(args.calibration_dataset or args.input_dataset))
         loader = torch.utils.data.DataLoader(
             dataset=dataset,
             batch_size=args.batch_size,
@@ -92,7 +92,7 @@ def main(args):
         args.threshold = utils.calibrate(all_weights, args.coverage)
         print(f'Threshold = {args.threshold:.5f}')
 
-    print('Loading target...')
+    print('Loading target dataset...')
     dataset = torch.utils.data.TensorDataset(
         *torch.load(args.input_dataset))
     loader = torch.utils.data.DataLoader(
