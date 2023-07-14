@@ -25,15 +25,11 @@ Install all other requirements via `pip install -r requirements.txt`.
 All commands should now be run from the root directory of this repository.
 
 
-## Pre-trained models
-All pre-trained $f(X)$ and $g(X)$ models used in our experiments (for CIFAR-10, ImageNet, and Lung) can be downloaded by running:
+## Pre-trained models and data
+All pre-trained $f(X)$ and $g(X)$ models and pre-processed data (with the exception of lung cancer data/models which we cannot directly release) can be downloaded by running
 ```
-./download_models.sh
-```
-
-Similarly, all pre-processed data (with the exception of lung cancer data, which we cannot directly release) can be downloaded by running:
-```
-./download_data.sh
+./download.sh cifar
+./download.sh imagenet
 ```
 See individual repositories for instructions on task-specific training, data downloading, and preprocessing.
 

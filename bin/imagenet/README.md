@@ -18,7 +18,7 @@ tar -xvf weather.tar -C data/datasets/imagenet/imagenet-c
 ```
 These files are separated by corruption severity---for out experiments we combined them all. To collapse the directory structure, run:
 ```
-python bin/imagenet/collapse_imagenet_c.py --dirname data/datasets/imagenet/imagenet-c
+python bin/imagenet/collapse_imagenet_c.py --input-dir data/datasets/imagenet/imagenet-c --output-dir data/datasets/imagenet/imagenet-c-collapsed
 ```
 
 You will also need to download the `train` and `val` splits for ImageNet, and put them in `data/datasets/imagenet/train` and `data/datasets/imagenet/val`, respectively.
