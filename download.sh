@@ -1,7 +1,7 @@
 #! /bin/bash
 
 OPTION=$1
-OUTPUT_DIR="data-tmp"
+OUTPUT_DIR="data"
 
 if [[ $OPTION != "cifar" && $OPTION != "imagenet" ]]; then
     echo "ERROR: dataset must be either 'cifar' or 'imagenet'. Given '${OPTION}'."
